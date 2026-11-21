@@ -1,0 +1,96 @@
+{
+  "agent": "sdlc-orchestrator",
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-status.sh\"", "timeout": 15 } ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-implementation-check.sh\"", "timeout": 20 } ] },
+      { "matcher": "^(Agent|mcp__github__.*)$",
+        "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow-validation.sh\"", "timeout": 20 } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "^(Write|Edit|MultiEdit|NotebookEdit|Bash|Skill|Agent|AskUserQuestion|mcp__.*)$",
+        "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-implementation-check.sh\"", "timeout": 20 } ] }
+    ],
+    "PostToolUseFailure": [
+      { "matcher": "^(Write|Edit|MultiEdit|NotebookEdit|Bash|Skill|Agent|AskUserQuestion|mcp__.*)$",
+        "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-implementation-check.sh\"", "timeout": 20 } ] }
+    ],
+    "SubagentStart": [
+      { "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow-validation.sh\"", "timeout": 20 } ] }
+    ],
+    "SubagentStop": [
+      { "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow-validation.sh\"", "timeout": 30 } ] }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "mcp__atlassian__getJiraIssue",
+      "mcp__atlassian__listJiraIssueComments",
+      "mcp__atlassian__searchJiraIssuesUsingJql",
+      "mcp__atlassian__getConfluenceContent",
+      "mcp__atlassian__searchConfluence",
+      "mcp__atlassian__getAccessibleAtlassianResources",
+      "mcp__atlassian__atlassianUserInfo",
+      "mcp__atlassian__discover",
+      "mcp__atlassian__executeRead",
+      "mcp__github__get_*",
+      "mcp__github__list_*",
+      "mcp__github__search_*",
+      "mcp__github__pull_request_read",
+      "mcp__github__issue_read",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch --show-current)",
+      "Bash(git rev-parse *)",
+       "Bash(git rev-parse *)",
+        "Bash(mvn -v)",
+        "Bash(./mvnw -v)",
+        "Bash(./mvnw -B test)",
+        "Bash(./mvnw -B test -Dtest=*)",
+        "Bash(./mvnw -B verify)",
+        "Bash(./mvnw -B verify -Pperformance)",
+        "Bash(./mvnw spring-boot:run)"
+    ],
+    "ask": [
+      "mcp__github__create_pull_request",
+      "mcp__github__update_pull_request",
+      "mcp__github__create_branch",
+      "mcp__github__push_files",
+      "mcp__github__create_or_update_file",
+      "mcp__github__update_pull_request_branch",
+      "mcp__github__add_issue_comment",
+      "mcp__github__issue_write",
+      "mcp__atlassian__transitionJiraIssue",
+      "mcp__atlassian__addOrEditJiraIssueComment",
+      "mcp__atlassian__createJiraIssue",
+      "mcp__atlassian__editJiraIssue",
+      "mcp__atlassian__createConfluenceContent",
+      "mcp__atlassian__updateConfluenceContent",
+      "mcp__atlassian__executeWrite",
+      "Bash(git push *)",
+      "Bash(git commit *)"
+    ],
+    "deny": [
+      "mcp__github__merge_pull_request",
+      "mcp__github__delete_file",
+      "mcp__github__delete_repository",
+      "mcp__github__create_repository",
+      "mcp__github__fork_repository",
+      "mcp__atlassian__executeDestructive",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git push * --force*)",
+      "Bash(git merge *)",
+      "Bash(git reset --hard*)",
+      "Bash(rm -rf *)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)"
+    ]
+  }
+}

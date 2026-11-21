@@ -1,0 +1,14 @@
+{
+  "_comment": "Example only. Copy to .mcp.json or register with `claude mcp add`. Server names MUST be 'atlassian' and 'github'. Never put tokens in this file; use environment variables.",
+  "mcpServers": {
+    "atlassian": {
+      "type": "http",
+      "url": "https://mcp.atlassian.com/v2/mcp"
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": { "Authorization": "Bearer ${GITHUB_MCP_TOKEN}" }
+    }
+  }
+}

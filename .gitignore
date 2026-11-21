@@ -1,0 +1,5 @@
+# SDLC framework runtime state (workflow state + audit log); artifacts live in docs/sdlc/
+.sdlc/
+
+# Personal Claude Code settings
+.claude/settings.local.json

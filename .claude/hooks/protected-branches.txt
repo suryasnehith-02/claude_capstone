@@ -1,0 +1,10 @@
+# Protected branches, one glob per line (case-insensitive). Agents may never push to or commit on these.
+# Lines starting with # are comments. Edit for your repository.
+main
+master
+develop
+development
+trunk
+release/*
+releases/*
+hotfix/*
