@@ -1,0 +1,284 @@
+/* C-3 Styles. Plain CSS, no dependency.
+   Rules that carry requirements:
+   - a visible :focus-visible outline on every control (NFR-3);
+   - Completed is shown by a text badge plus strike-through plus a different border, never by colour alone (FR-6);
+   - success and error messages are separated by border style as well as colour (NFR-3);
+   - descriptions keep the user's line breaks (white-space: pre-wrap) (FR-1, AC-21);
+   - the view (view.js) marks a row with class "task" and data-status="Pending" | "Completed". */
+
+:root {
+  --text: #1b1f24;
+  --muted: #4a5360;
+  --border: #6b7686;
+  --accent: #1a56db;
+  --ok: #176b34;
+  --bad: #a4261b;
+  --surface: #ffffff;
+  --page: #f4f6f8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 1.5rem 1rem 3rem;
+  background: var(--page);
+  color: var(--text);
+  font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main,
+.note {
+  max-width: 44rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.note {
+  padding: 0.5rem 0.75rem;
+  border: 1px dashed var(--border);
+  background: var(--surface);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+h1 {
+  margin: 0 0 1rem;
+  font-size: 1.75rem;
+}
+
+h2 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+/* Focus: visible on every control and on the programmatic focus targets. */
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+h2[tabindex="-1"]:focus,
+h3[tabindex="-1"]:focus {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Messages: always rendered (never display:none), so live regions announce reliably. */
+.messages p {
+  margin: 0;
+}
+
+.messages p:not(:empty) {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--surface);
+  font-weight: 600;
+}
+
+#msg-status:not(:empty) {
+  border: 2px solid var(--ok);
+  border-left-width: 8px;
+  color: var(--ok);
+}
+
+#msg-alert:not(:empty) {
+  border: 2px dashed var(--bad);
+  border-left: 8px solid var(--bad);
+  color: var(--bad);
+}
+
+/* Forms */
+.field {
+  margin-bottom: 0.75rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+input[type="text"],
+textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border: 2px solid var(--bad);
+}
+
+.field-error {
+  margin: 0.25rem 0 0;
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.field-error:empty {
+  margin: 0;
+}
+
+button {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+button[type="submit"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+#add-form {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+#list-status {
+  margin: 0.5rem 0;
+  color: var(--muted);
+}
+
+#list-status:empty {
+  margin: 0;
+}
+
+/* Orphaned draft panel (AC-22) */
+#orphan {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.orphan-text {
+  margin: 0.25rem 0;
+}
+
+/* Task list */
+#task-list {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.task[data-status="Completed"] {
+  border: 3px double var(--ok);
+}
+
+.task[data-status="Completed"] h3 {
+  text-decoration: line-through;
+}
+
+.task[aria-busy="true"] {
+  opacity: 0.85;
+}
+
+.desc {
+  margin: 0.25rem 0 0.5rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  display: inline-block;
+  margin: 0.25rem 0 0.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.task[data-status="Completed"] .badge {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Confirm dialog */
+dialog {
+  max-width: 28rem;
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--text);
+  border-radius: 6px;
+  color: var(--text);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+dialog h2 {
+  margin-top: 0;
+}
+
+#confirm-text {
+  overflow-wrap: anywhere;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tasks</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<noscript><p class="note">This page needs JavaScript to load and manage tasks.</p></noscript>
+<p id="boot-note" class="note">Tasks load only when this page is opened at http://127.0.0.1:8000/ through the frontend server, not from a file.</p>
+
+<main id="app">
+  <h1>Tasks</h1>
+
+  <div class="messages">
+    <p id="msg-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    <p id="msg-alert" role="alert" aria-atomic="true"></p>
+  </div>
+
+  <form id="add-form" novalidate aria-label="Add a task">
+    <div class="field">
+      <label for="add-title">Title</label>
+      <input id="add-title" name="title" type="text" autocomplete="off" aria-describedby="add-title-error">
+      <p id="add-title-error" class="field-error"></p>
+    </div>
+    <div class="field">
+      <label for="add-description">Description (optional)</label>
+      <textarea id="add-description" name="description" rows="3" aria-describedby="add-description-error"></textarea>
+      <p id="add-description-error" class="field-error"></p>
+    </div>
+    <button type="submit" id="add-submit">Add task</button>
+  </form>
+
+  <section aria-labelledby="list-heading">
+    <h2 id="list-heading" tabindex="-1">Your tasks</h2>
+    <p id="list-status" role="status"></p>
+    <button type="button" id="retry" hidden>Retry</button>
+    <div id="orphan" hidden>
+      <h3 id="orphan-heading" tabindex="-1">Your unsaved text</h3>
+      <p id="orphan-title" class="orphan-text"></p>
+      <p id="orphan-description" class="orphan-text desc"></p>
+      <button type="button" id="orphan-dismiss">Dismiss</button>
+    </div>
+    <ul id="task-list"></ul>
+  </section>
+
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-text">
+    <h2 id="confirm-title">Delete task?</h2>
+    <p id="confirm-text"></p>
+    <div class="dialog-actions">
+      <button type="button" id="confirm-cancel">Cancel</button>
+      <button type="button" id="confirm-ok">Delete</button>
+    </div>
+  </dialog>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
