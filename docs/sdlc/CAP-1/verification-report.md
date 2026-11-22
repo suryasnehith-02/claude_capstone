@@ -278,3 +278,38 @@ NOT_RUN (other):
 | 504 gateway-timeout path, malformed percent paths, 413 oversize body through the proxy | not covered by any test |
 | Browsers other than Edge 158 and VS Code Electron / Chrome 150: standalone Chrome, Firefox, Safari | not reported |
 | Build, lint, type check, dependency audit | no command defined in the repository (no CI, no manifest; README: no build step, no dependency) |
+
+## 11. Post-merge addendum (human-reported, 2026-11-22)
+
+**Status of this addendum.** Sections 1 to 10 above were written BEFORE the merge of PR #2 (merge commit ca70979). Their matrix, counts and PENDING HUMAN items are left unchanged as a historical record. This addendum records what the human reported in chat after the merge. I executed no command in this addendum and saw no output of any kind: nothing below is agent-verified.
+
+**What was reported.** The human started the merged application (backend `./mvnw spring-boot:run` on port 8080, frontend `java server/FrontendServer.java` on port 8000) and ran the 9-step real-backend checklist (`frontend/README.md` section 4) in Microsoft Edge or Chrome. He wrote "All 9 passed in Edge or Chrome". The exact browser and version were NOT stated. He did not paste any console or Network output. Every result below is therefore HUMAN-REPORTED PASS: not agent-verified, no output seen by any agent, browser and version not stated.
+
+### 11.1 The nine steps
+| Step | Reported check | Result | Covers |
+|---|---|---|---|
+| 1 | Page loads at `http://127.0.0.1:8000/` with no CORS error and no console errors | HUMAN-REPORTED PASS | AC-23, NFR-1 (real-backend flow, no CORS error); AC-1 (real list load) |
+| 2 | Add a task: it appears first, form cleared, "Task added", `POST /todos` 201 through the same origin | HUMAN-REPORTED PASS | AC-4, AC-23, NFR-1; AC-1 (new task shown first) |
+| 3 | A second task is added, newest first | HUMAN-REPORTED PASS | AC-1, AC-4 (real list order) |
+| 4 | Enter on an empty title shows "Title is required" and sends no request | HUMAN-REPORTED PASS | AC-5 (real keyboard Enter on an empty title) |
+| 5 | Edit and Save shows "Task updated"; Edit then Cancel changes nothing | HUMAN-REPORTED PASS | AC-7, AC-8 (real edit and cancel) |
+| 6 | Mark Completed then Pending; badge and button text change and a message appears each time | HUMAN-REPORTED PASS | AC-10 (real status change) |
+| 7 | Delete with the dialog: Delete removes the task with "Task deleted"; Cancel and Escape keep it | HUMAN-REPORTED PASS | AC-9, FR-5 (real delete, including Cancel and the real Escape key) |
+| 8 | Backend stopped, page reloaded: an error with Retry is shown and NOT "No tasks yet"; backend restarted, Retry shows the list | HUMAN-REPORTED PASS | AC-3 (real load failure and Retry) |
+| 9 | Keyboard-only operation, visible focus outline, the dialog keeping focus | HUMAN-REPORTED PASS | AC-14 and NFR-3, keyboard-only part (real keyboard operation, visible focus, dialog focus) |
+
+Effect on the PENDING HUMAN list in section 10, as reported by the human and not agent-verified: the four items "AC-23 real-backend flow", "AC-3 real load failure and Retry", "Real delete against the real backend" and "Keyboard-only walk-through" are now HUMAN-REPORTED PASS. The real-part PENDING HUMAN entries for AC-1, AC-4, AC-7, AC-10 and the real-flow parts of FR-1, FR-3, FR-4, FR-5, FR-6, FR-8 (messages in the real flow only), FR-9 (real load failure) and FR-10 are covered by steps 1 to 8 on the same basis. AC-23 and NFR-1 move from PENDING HUMAN to HUMAN-REPORTED PASS for the real-backend flow; their agent-executed halves (V-5 stub proxy, `backend/` unchanged) are unchanged.
+
+### 11.2 What remains
+- **Screen-reader check (checklist step 10, optional): NOT_RUN.** The human did not report it. This keeps the screen-reader and real-announcement part of AC-14 and NFR-3 open.
+- **Firefox and Safari: NOT_RUN.** Standalone Chrome and Edge are only reported as "Edge or Chrome" without a version, so no browser version evidence was added for NFR-4.
+- **NOT_RUN BY H-2 (unchanged):** the security aspect of NFR-2, the 10 s time limit as a timing claim (NFR-6), and NFR-7 performance, plus the other H-2 items in section 10.
+- **Earlier NOT_RUN items that were not part of the checklist (unchanged):** standalone server start in a non-human run (an agent has still never started it), the 504 gateway-timeout path, the 413 oversize-body path and malformed-percent paths through the proxy, the refuse-to-start case (SKIPPED in V-5), the `frontend/`-relative test form, and build, lint and type check (no command in the repo).
+- **Not covered by the nine reported steps:** the real-backend display of a task whose text contains markup (the "real task" part of AC-21 in section 6.1). It was not reported, so I do not treat it as closed.
+- **Execution of the UI by an agent:** still NOT_RUN. No agent has executed the UI JavaScript, started the backend or opened a browser.
+
+### 11.3 Overall status
+The overall status stays PARTIAL, because no agent has executed the UI and the remaining gaps above are NOT_RUN, not failures. All items that section 10 listed as PENDING HUMAN, except the screen-reader check, are now HUMAN-REPORTED PASS. Counts of AGENT-EXECUTED PASS (13) and FAIL (0) are unchanged; no new evidence entry (V-n or S-n) was added. Open critical/major review findings remain 0/0.
+
+### 11.4 PR #2 description files
+The `pr-description` files of PR #2 still describe these real-backend checks as pending, because they were written before the merge.
