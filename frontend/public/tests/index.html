@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CAP-1 self-test</title>
+<link rel="icon" href="data:,">
+<style>
+  body { font-family: sans-serif; margin: 1rem 2rem; }
+  #summary { font-size: 1.4rem; font-weight: bold; padding: 0.3rem 0.6rem; border: 2px solid #555; display: inline-block; }
+  #summary.ok { border-color: #1a7f37; }
+  #summary.bad { border-color: #b42318; }
+  #test-list { font-family: monospace; padding-left: 1.2rem; }
+  #test-list li.fail { color: #b42318; font-weight: bold; }
+  #results { border: 1px solid #888; padding: 0.5rem; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>CAP-1 self-test (browser)</h1>
+<p>Open this page at <code>http://127.0.0.1:8000/tests/</code> while the frontend server is running. Paste the summary line and the block below back to the developer, with your browser and version.</p>
+<p id="summary" role="status">Running...</p>
+<h2>Paste block</h2>
+<pre id="results"></pre>
+<h2>All tests</h2>
+<ul id="test-list"></ul>
+
+<script type="module">
+  import { it, run, renderReport } from './harness.js';
+
+  // Each later task adds its own test module to this list.
+  const TEST_MODULES = [
+    './validation.test.js',
+    './api.test.js',
+    './messages.test.js',
+    './announcer.test.js',
+    './dialog.test.js',
+    './app.test.js',
+    './app-edit-delete.test.js',
+  ];
+
+  for (const path of TEST_MODULES) {
+    try {
+      await import(path);
+    } catch (error) {
+      // A module that fails to load is reported as one failed test instead of stopping the run.
+      const message = error && error.message ? error.message : String(error);
+      it(`load ${path}`, () => {
+        throw new Error(`could not load: ${message}`);
+      });
+    }
+  }
+
+  renderReport(await run());
+</script>
+<noscript>This page needs JavaScript.</noscript>
+</body>
+</html>
