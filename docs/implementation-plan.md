@@ -1,53 +1,62 @@
 # Implementation Plan — Todo Query Enhancements + Partial Updates (Local-only)
 
-**Repository:** `claude_capstone`  
-**Base branch:** `main` (must not be modified directly)  
-**Feature branch (for docs only, per approval):** `feature/todo-query-and-patch`  
-**Direction:** Local-only (`127.0.0.1` / `localhost`). No authentication/authorization. No new frameworks. Preserve custom gateway/pipeline.
-
----
+Base branch: `main` (protected; do not modify)  
+Work branch: `feature/todo-query-and-patch` (docs-only commit in this step)  
+Repository: `claude_capstone`
 
 ## Project Overview
-Enhance the existing Todo application to support scalable browsing (search/filter/sort/pagination) and partial updates, with strict validation, deterministic ordering, expanded automated tests, and clear documentation—without changing architecture or introducing new tooling.
+Enhance the existing local-only Todo application to support:
+- `GET /todos` **search** (`q`), **filter** (`status`), **sort** (`sortBy`/`sortOrder`), and **pagination** (`limit`/`offset`)
+- New `PATCH /todos/{id}` for **partial updates** (title/description only)
+- Frontend controls and improved states (vanilla JS; no npm/build)
+- Expanded backend tests (contract/negative/boundary) and gateway/pipeline documentation & tests
+
+All changes must preserve:
+- Existing architecture (Spring Boot + SQLite + Java FrontendServer proxy + vanilla HTML/CSS/JS)
+- Existing custom gateway/pipeline approach
+- Existing error envelope and HTTP conventions
+- Backward compatibility: **`GET /todos` with no query params returns the full list using the current default ordering**
 
 ---
 
 ## Scope
-
 ### In Scope
-- **Backend API**
-  - Enhance `GET /todos` with **search (`q`)**, **filter (`status`)**, **sort (`sortBy`, `sortOrder`)**, **pagination (`limit`, `offset`)**.
-  - Keep response as a **plain JSON array**; preserve existing default behavior when no query params.
-  - Add `PATCH /todos/{id}` to partially update **title** and/or **description** only.
-  - Enforce strict validation (unknown query params rejected, invalid combinations rejected).
-  - Deterministic ordering when timestamps match.
-- **Frontend**
-  - Add controls for search/filter/sort/pagination.
-  - Improve list loading/error/retry/empty states.
-  - Preserve no-npm / no build-step approach.
-- **Testing & Docs**
-  - Add/expand API contract tests, negative and boundary tests.
-  - Document and test gateway/pipeline parsing/routing/error handling relevant to changes.
+1. **Todo search and filtering**
+   - Search (`q`) case-insensitive contains across title + description
+   - Status filter (`status`) Pending/Completed
+2. **Todo sorting and pagination**
+   - Sort by `createdAt` or `updatedAt`
+   - `sortOrder` asc/desc
+   - Pagination with `limit` (1..100) and `offset` (>=0)
+3. **Partial updates**
+   - `PATCH /todos/{id}` updates only `title` and/or `description`
+   - Reject `{}` empty payload; reject unknown fields; reject nulls; reject invalid types
+   - Atomic persistence
+4. **Frontend enhancements**
+   - Search/filter/sort/pagination controls
+   - Clear loading/error/retry/empty states
+5. **Testing & docs**
+   - Contract/negative/boundary tests for new behaviors
+   - Gateway/pipeline documentation and targeted tests
 
 ### Out of Scope
-- Authentication/authorization
-- LAN/remote exposure, HTTPS, rate limiting
-- Health/ready endpoints, observability
-- Archived status/soft deletion, bulk operations
-- Due dates, priorities, tags
-- Major refactoring of architecture
-- DB schema changes beyond optional indexes (indexes only if testing proves need)
+- AuthN/AuthZ
+- Remote/LAN exposure, HTTPS, rate limiting
+- Archived status, bulk operations, tags/due dates/priorities
+- Response envelope changes for `GET /todos`
+- Major refactors or new frameworks
+- DB indexing unless tests demonstrate a performance need
 
 ---
 
 ## Technology Stack
-- **Backend:** Java (21+), Spring Boot, JDBC, SQLite (xerial sqlite-jdbc)
-- **Frontend:** Vanilla HTML/CSS/JavaScript (ES modules)
-- **Frontend server:** Java static server + reverse proxy
+- Backend: Java 21+, Spring Boot, JDBC, SQLite (file DB)
+- Frontend: vanilla HTML/CSS/JavaScript (ES modules)
+- Frontend server: Java static server + reverse proxy
 
 ---
 
-## Approved Jira Stories (planned; keys TBD)
+## Approved Jira Epic & Stories (keys TBD)
 **Epic:** Todo Query Enhancements & Partial Update Support
 
 1. API: Search todos via `q`
@@ -57,215 +66,182 @@ Enhance the existing Todo application to support scalable browsing (search/filte
 5. API: Reject unknown query parameters on `GET /todos`
 6. API: Add `PATCH /todos/{id}` partial update (title/description only, atomic)
 7. Frontend: Add search/filter/sort/pagination controls + robust states
-8. Engineering: Add gateway/pipeline docs + targeted tests; expand API contract/negative tests
+8. Engineering: Gateway/pipeline docs + targeted tests; expand API contract/negative tests
 
 ---
 
-## Requirements Summary (implementation targets)
+## Implementation Sequence (Roadmap)
 
-### `GET /todos` query params (supported set only)
-- `q` (string): trimmed; if empty after trim → treated as not provided.
-- `status`: `Pending` | `Completed`
-- `sortBy`: `createdAt` | `updatedAt`
-- `sortOrder`: `asc` | `desc`
-- `limit`: int in `[1..100]`
-- `offset`: int `>= 0`
+### Phase 0 — Discovery & characterization tests
+**Goal:** lock in current behavior before enhancements.
+- Add characterization tests for:
+  - `GET /todos` default ordering when no query params
+  - existing error envelope patterns (baseline)
+- Identify schema fields to use as deterministic secondary key (e.g., `seq` or `id`).
 
-### Validation rules
-- Reject **unknown query parameters** with `400`.
-- Reject `offset` without `limit` with `400`.
-- If `limit` provided and `offset` omitted → default `offset=0`.
-- Reject `sortOrder` without `sortBy` with `400`.
-- If `sortBy` provided and `sortOrder` omitted → default `sortOrder=desc`.
-- Preserve current default ordering when **no sorting params** supplied.
-- Sorting must be deterministic: when timestamps tie, apply a consistent **secondary key**.
+**Deliverables:** characterization tests; confirmed ordering and tie-break strategy.
 
-### Search behavior
-- Case-insensitive contains across title OR description.
-- Unicode supported as SQLite permits.
+### Phase 1 — Request model and validation wiring (gateway/pipeline)
+**Goal:** implement strict parsing & validation without changing persistence yet.
+- Introduce domain model for list query:
+  - `TaskQuery` with optional `q`, `status`, `sortBy`, `sortOrder`, `limit`, `offset`
+- Implement strict query validation:
+  - allowlist query params only
+  - `offset` requires `limit`
+  - `limit` 1..100
+  - `offset` >= 0
+  - `sortOrder` requires `sortBy`
+  - `sortBy` without `sortOrder` defaults `desc`
+  - `q` trimming; whitespace-only treated as missing
+- Implement PATCH body validation:
+  - only `title`/`description`
+  - reject `{}`
+  - reject unknown fields/nulls/invalid types
+  - reuse existing title/description validation rules
 
-### `PATCH /todos/{id}`
-- Supports only `title` and `description`.
-- Reject `{}` with `400`.
-- Reject unsupported fields, nulls, invalid types with `400`.
-- Omitted fields remain unchanged.
-- Updates are **atomic**: any validation failure → no persistence.
+**Deliverables:** request parsing/validation implemented in the existing pipeline/validator components.
 
----
-
-## Implementation Sequence (Phases 0–5)
-
-### Phase 0 — Discovery & baseline protection
-**Goal:** verify current behavior for compatibility.
-- Characterize current `GET /todos` ordering and response shape.
-- Identify where query params are parsed/validated in gateway/pipeline.
-- Identify stable secondary key for deterministic ordering (e.g., `seq` or `id`).
-
-**Deliverables**
-- Characterization tests (backend) verifying default `GET /todos` unchanged.
-
----
-
-### Phase 1 — Backend request model + validation plumbing
-**Goal:** add query parsing + validation through existing pipeline/validator.
-- Introduce **TaskQuery** model to represent parsed query params.
-- Extend `TodoRequestPipeline` (or adjacent request parsing layer) to:
-  - Parse and validate supported query params.
-  - Enforce unknown parameter rejection.
-- Extend `TaskRequestValidator` with:
-  - query validation rules above
-  - PATCH body validation (see Phase 3)
-
-**Notes**
-- Keep custom gateway/pipeline architecture; do not migrate to Spring MVC binding/DTOs.
-
----
-
-### Phase 2 — Persistence enhancements (search/filter/sort/pagination)
-**Goal:** implement efficient repository query without breaking existing behavior.
-- Keep existing `findAllOrdered()` untouched (backward compatible).
-- Add new repository method, e.g. `findByQuery(TaskQuery query)`.
-- Implement SQL to support:
-  - optional search (`q`) across title/description
+### Phase 2 — Persistence enhancements for list query
+**Goal:** add repository support for queried list operations.
+- Keep existing `findAllOrdered()` unchanged.
+- Add new repository method (example): `findByQuery(TaskQuery query)`.
+- Implement SQL generation that supports:
   - optional status filter
-  - optional sortBy/sortOrder (and deterministic tie-break)
-  - pagination (limit/offset)
+  - optional case-insensitive contains search across title/description
+  - sort on createdAt/updatedAt with `asc|desc` and deterministic secondary sort key
+  - optional `limit`/`offset`
 
-**DB Changes**
-- No schema changes required.
-- **Do not add indexes** unless tests demonstrate a performance need.
+**Deliverables:** repository method + tests for query correctness.
 
----
+### Phase 3 — Service/controller wiring + new PATCH endpoint
+**Goal:** expose new capabilities through existing controller and response helpers.
+- `GET /todos` behavior:
+  - no query params → existing behavior (service.list() using findAllOrdered)
+  - any query params → parse/validate to `TaskQuery`, then call service.list(query)
+- Add `PATCH /todos/{id}`:
+  - parse id
+  - parse/validate body
+  - call service.patch(...) with atomic update
 
-### Phase 3 — Service + Controller wiring (enhanced GET + new PATCH)
-**Goal:** expose features via API with consistent envelope and conventions.
-- `GET /todos`
-  - If no query params: call existing list method and preserve behavior.
-  - If any supported query param present: validate and use query-based list.
-- Add `PATCH /todos/{id}`
-  - Parse id via pipeline.
-  - Validate PATCH body (title/description only).
-  - Apply atomic update and return updated todo.
+**Deliverables:** API endpoints complete with consistent responses/errors.
 
-**Compatibility**
-- Preserve existing error envelope and HTTP conventions.
+### Phase 4 — Frontend enhancements (no build step)
+**Goal:** add UI controls and state handling.
+- Add search/filter/sort/pagination controls
+- Ensure UI never emits invalid query combinations:
+  - never send `offset` without `limit`
+  - never send `sortOrder` without `sortBy`
+- State behavior:
+  - loading, empty, no-results, error with retry
+  - reset `offset=0` when query/filter/sort/limit changes
 
----
+**Deliverables:** updated UI, compatible with existing flows.
 
-### Phase 4 — Frontend UI changes (no npm)
-**Goal:** add controls and improve states.
-- Add search/filter/sort/pagination controls.
-- Ensure UI never emits invalid combinations (e.g., offset without limit).
-- Improve states: loading, error (retry), empty, no-results.
-- Preserve existing CRUD/status-toggle flows.
+### Phase 5 — Documentation + test hardening
+**Goal:** finalize docs and strengthen regression coverage.
+- Document:
+  - new query params + validation rules
+  - PATCH endpoint schema + examples
+  - gateway/pipeline behavior and error envelope conventions
+- Add/extend tests:
+  - contract/negative/boundary for GET query params
+  - PATCH atomicity and validation
+  - gateway/pipeline behavior tests for unknown query params
 
----
-
-### Phase 5 — Docs + test hardening
-**Goal:** lock behavior with documentation and comprehensive tests.
-- Update docs:
-  - new query params and examples
-  - PATCH schema and examples
-  - gateway/pipeline behavior (routing, parsing, error mapping)
-- Add/expand tests:
-  - contract tests for combined query behavior
-  - negative and boundary tests
-  - gateway/pipeline behavior tests
+**Deliverables:** docs + full automated test suite passing.
 
 ---
 
 ## Dependencies
-- Frontend controls depend on final backend query validation rules.
-- Deterministic ordering depends on confirmed secondary key (`seq` vs `id`).
+- Phase 0 is prerequisite for ensuring backward compatibility (ordering).
+- Frontend work depends on finalized backend validation rules to avoid emitting invalid requests.
+- Deterministic ordering depends on confirming the stable secondary key in schema.
 
 ---
 
-## File-Level Change Plan (expected)
+## File-Level Change Plan (Expected)
 
-### Backend — expected modifications
+### Backend (likely to modify)
 - `backend/src/main/java/com/capstone/todo/web/TodoController.java`
 - `backend/src/main/java/com/capstone/todo/web/request/TodoRequestPipeline.java`
 - `backend/src/main/java/com/capstone/todo/validation/TaskRequestValidator.java`
 - `backend/src/main/java/com/capstone/todo/domain/TaskService.java`
 - `backend/src/main/java/com/capstone/todo/domain/TaskRepository.java`
 - `backend/src/main/java/com/capstone/todo/persistence/SqliteTaskRepository.java`
+- `backend/README.md` (or docs file where API is documented)
 
-### Backend — expected new files
+### Backend (likely new)
 - `backend/src/main/java/com/capstone/todo/domain/TaskQuery.java`
-- `backend/src/main/java/com/capstone/todo/domain/PatchTask.java` (or equivalent command object)
+- `backend/src/main/java/com/capstone/todo/domain/PatchTask.java` (or similar)
 
-### Frontend — expected modifications
+### Frontend (likely to modify)
 - `frontend/public/index.html`
-- `frontend/public/*.js`
+- `frontend/public/*.js` (list fetch/render/state)
 - `frontend/public/*.css`
-- `frontend/public/tests/*` (manual harness additions, as appropriate)
+- `frontend/public/tests/*` (optional: update harness)
 
 ---
 
 ## Database Changes
-- None required.
-- Optional: add indexes only if benchmarks/tests show clear need.
-
----
-
-## API Changes
-- **Enhanced:** `GET /todos` supports validated query params; rejects unknown params.
-- **New:** `PATCH /todos/{id}` supports title/description only (atomic).
-- No response envelope changes; `GET /todos` remains plain JSON array.
-
----
-
-## Frontend Changes
-- Add controls for query params.
-- Improve list view states.
-- Keep existing no-build approach.
+- No schema changes required.
+- Do not add indexes unless performance tests demonstrate need.
 
 ---
 
 ## Testing Strategy
 
 ### Unit tests
-- Validator tests for query parameter rules and PATCH body rules.
-- Repository tests for SQL correctness: search/filter/sort/pagination + deterministic ordering.
+- Validator tests for query param rules and PATCH payload rules.
+- Domain model tests for `TaskQuery` normalization (q trimming).
+
+### Repository tests
+- Verify search/filter/sort/pagination correctness.
+- Verify deterministic ordering tie-breaker.
 
 ### API/Integration tests
-- Characterization/regression: default `GET /todos` unchanged.
-- `GET /todos` param combinations and negative cases (unknown params, invalid ranges/combos).
-- `PATCH /todos/{id}`: positive/negative/atomicity tests.
+- Characterize default `GET /todos` behavior (no query params) to prevent regressions.
+- GET query matrix tests:
+  - search-only, filter-only, sort-only, pagination-only, combined
+  - invalid values: limit out of range, offset negative, offset without limit, sortOrder without sortBy, unknown params
+- PATCH tests:
+  - title-only, description-only, both
+  - reject `{}` and unsupported fields
+  - atomicity (mixed valid/invalid => no persistence)
 
-### Frontend tests (within constraints)
-- Extend browser-based test harness/checklist for new controls and states.
-- Java proxy tests to ensure query strings are forwarded intact.
-
----
-
-## Security Considerations
-- Local-only. No auth.
-- Emphasis on input validation, strict allowlist, and consistent error envelopes.
+### Frontend testing
+- Extend existing browser-based test harness checklist to cover:
+  - search/filter/sort/pagination UI interactions
+  - error/retry states
 
 ---
 
 ## Risks & Mitigations
-- **Default ordering drift:** add characterization test before changing list query path.
-- **SQLite case-insensitive Unicode limitations:** implement best-effort `LOWER(...) LIKE LOWER(?)` and document.
-- **Deterministic ordering key ambiguity:** confirm schema and use stable secondary key.
-- **UI emitting invalid query combos:** enforce UI rules and add simple unit-ish checks in frontend code where feasible.
+- **Default ordering regression risk:** mitigate with characterization tests in Phase 0.
+- **SQLite case-insensitive Unicode behavior variance:** implement `LOWER(...) LIKE LOWER(?)` and document limitations; add tests for ASCII and a minimal Unicode case.
+- **Validation strictness breaking unknown clients:** this is explicitly required; mitigate with clear docs and tests.
+- **Frontend state complexity:** keep rules simple (reset offset on any query-affecting change; disable next when results < limit).
 
 ---
 
 ## Milestones
-1. M1: Characterization tests + query model drafted
-2. M2: Backend GET query support complete + tests
-3. M3: PATCH endpoint complete + tests
-4. M4: Frontend controls + states complete
-5. M5: Docs + regression suite green
+- M1: Phase 0 complete (behavior locked by tests)
+- M2: Query validation + TaskQuery model (Phase 1)
+- M3: Repository query support (Phase 2)
+- M4: Controller/service wiring + PATCH endpoint (Phase 3)
+- M5: Frontend controls + states (Phase 4)
+- M6: Docs + full regression suite (Phase 5)
 
 ---
 
 ## Definition of Done
-- Default `GET /todos` unchanged (verified by automated tests).
-- New query capabilities and PATCH endpoint implemented per validation rules.
-- Automated tests cover positive, negative, and boundary scenarios.
-- Documentation updated for API and gateway/pipeline behavior.
-- No npm/build step introduced.
-- No changes to `main`; work done on feature branch only.
+- Backward compatible default `GET /todos` verified by automated tests.
+- New query params validated strictly per requirements.
+- `PATCH /todos/{id}` implemented with atomic updates and strict validation.
+- Frontend supports controls and clear states with no build tooling.
+- Automated tests cover positive/negative/boundary scenarios.
+- Documentation updated.
+
+---
+
+## Human Approval Gate
+This plan is approved; next step is docs-only commit on `feature/todo-query-and-patch`.
